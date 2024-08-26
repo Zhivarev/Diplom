@@ -1,0 +1,75 @@
+- hosts: master
+  become: yes
+
+  tasks:
+  - name: initialize the cluster
+    shell: kubeadm init --pod-network-cidr=10.244.0.0/16
+    args:
+      chdir: $HOME
+      creates: cluster_initialized.txt
+
+  - name: create .kube directory
+    become: yes
+    become_user: ubuntu
+    file:
+      path: $HOME/.kube
+      state: directory
+      mode: 0755
+
+  - name: copies admin.conf to user's ubuntu config
+    copy:
+      src: /etc/kubernetes/admin.conf
+      dest: /home/ubuntu/.kube/config
+      remote_src: yes
+      owner: ubuntu
+
+  - name: install Pod network
+    become: yes
+    become_user: ubuntu
+    shell: kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+    args:
+      chdir: $HOME
+
+  - name: Get the token for joining the worker nodes
+    become: yes
+    become_user: ubuntu
+    shell: kubeadm token create  --print-join-command
+    register: kubernetes_join_command
+
+  - name: show the value of output
+    debug:
+      msg: "{{ kubernetes_join_command.stdout }}"
+
+  - name: Touch a file /tmp/kubernetes_join_command
+    ansible.builtin.file:
+      path: /tmp/kubernetes_join_command
+      state: touch
+
+  - name: Add a line to a file /tmp/kubernetes_join_command
+    ansible.builtin.lineinfile:
+      path: /tmp/kubernetes_join_command
+      line: 
+        msg: "{{ kubernetes_join_command.stdout_lines[0] }}"
+      create: yes
+
+  - name: Chaenge to /tmp/kubernetes_join_command
+    become: yes
+    become_user: ubuntu
+    shell: awk -F"'" '{print $4}' /tmp/kubernetes_join_command >> /tmp/kubernetes_join
+    register: kubernetes_join_command
+
+  - name: Copy join command to local machine.
+    fetch:
+      src: /tmp/kubernetes_join
+      dest: /tmp/
+      flat: true
+
+  - name: Copy file /etc/kubernetes/admin.conf & change permissions $HOME/.kube/config/
+    become: yes
+    become_user: ubuntu
+    shell: |
+        sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
+        sudo cp /tmp/kubernetes_join $HOME/.kube/config
+        sudo chown $(id -u):$(id -g) $HOME/.kube/config
+        sudo chmod 700 $HOME/.kube/config
+...
