@@ -19,7 +19,6 @@ resource "yandex_compute_instance" "master-node" {
     }
   }
 
-## Прерываемая
   scheduling_policy {
     preemptible             = true
   }
