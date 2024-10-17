@@ -151,7 +151,7 @@
 
 ### Создание облачной инфраструктуры
 
-Переходим в папку _diplom/sa_, выполняем `terraform init`, `terraform plan` и `terraform apply`. Результат - создание сервисного аккаунта, статического ключа и `bucket`.
+Переходим в папку _Diplom/sa_, выполняем `terraform init`, `terraform plan` и `terraform apply`. Результат - создание сервисного аккаунта, статического ключа и `bucket`.
 
 Созданный `bucket`
 ![bucket](img/diplom-01.png)
@@ -190,6 +190,117 @@ provider "yandex" {
 }
 ```
 
+Второй вариант создания сервисного аккаунта и bucket через консоль yc
+
+```
+shaman@hulk:~/project
+% yc iam service-account create --name bucket                                                              24-10-12 - 23:07:14
+done (1s)
+id: ajevksn4ld3h332tu53b
+folder_id: b1gfsa2tbdkktui2b7qs
+created_at: "2024-10-12T20:30:04.720272867Z"
+name: bucket
+
+
+shaman@hulk:~/project
+% yc storage bucket create --name zhivarev                                                                 24-10-12 - 23:30:06
+name: zhivarev
+folder_id: b1gfsa2tbdkktui2b7qs
+anonymous_access_flags:
+  read: false
+  list: false
+default_storage_class: STANDARD
+versioning: VERSIONING_DISABLED
+acl: {}
+created_at: "2024-10-12T20:41:40.394018Z"
+```
+
+Получаем ID созданного bucket и задаем роль editor для сервисного аккаунта bucket
+
+```
+shaman@hulk:~/project
+% yc storage bucket list                                                                              :( 1 24-10-12 - 23:52:12
++----------+----------------------+----------+-----------------------+---------------------+
+|   NAME   |      FOLDER ID       | MAX SIZE | DEFAULT STORAGE CLASS |     CREATED AT      |
++----------+----------------------+----------+-----------------------+---------------------+
+| zhivarev | b1gfsa2tbdkktui2b7qs |        0 | STANDARD              | 2024-10-12 20:41:40 |
++----------+----------------------+----------+-----------------------+---------------------+
+
+
+shaman@hulk:~/project
+% yc resource-manager folder add-access-binding b1gfsa2tbdkktui2b7qs \                                     24-10-12 - 23:53:08
+  --role editor \
+  --subject serviceAccount:ajevksn4ld3h332tu53b
+done (2s)
+effective_deltas:
+  - action: ADD
+    access_binding:
+      role_id: editor
+      subject:
+        id: ajevksn4ld3h332tu53b
+        type: serviceAccount
+```
+
+Устанавливаем максимальный размер bucket
+
+```
+shaman@hulk:~/project
+% yc storage bucket update \                                                                           :( 1 24-10-13 - 0:00:13
+  --name zhivarev \            
+  --max-size 1073741824
+name: zhivarev
+folder_id: b1gfsa2tbdkktui2b7qs
+default_storage_class: STANDARD
+versioning: VERSIONING_DISABLED
+max_size: "1073741824"
+acl: {}
+created_at: "2024-10-12T20:41:40.394018Z"
+```
+
+Настраиваем публичный доступ к bucket
+
+```
+shaman@hulk:~/project
+% yc storage bucket update \                                                                                24-10-13 - 0:01:20
+  --name zhivarev \
+  --public-read \
+  --public-list \
+  --public-config-read
+name: zhivarev
+folder_id: b1gfsa2tbdkktui2b7qs
+anonymous_access_flags:
+  read: true
+  list: true
+  config_read: true
+default_storage_class: STANDARD
+versioning: VERSIONING_DISABLED
+max_size: "1073741824"
+acl: {}
+created_at: "2024-10-12T20:41:40.394018Z"
+```
+
+Создаем статический ключ
+
+```
+shaman@hulk:~/project
+% yc iam access-key create --service-account-name bucket                                                    24-10-13 - 0:05:51
+access_key:
+  id: ajege5u9d5h90cnc2nrb
+  service_account_id: ajevksn4ld3h332tu53b
+  created_at: "2024-10-12T21:28:15.827955412Z"
+  key_id: YC************
+secret: YC**********
+```
+
+Добавляем в переменные окружения идентификатор ключа и секретный ключ
+```
+shaman@hulk:~/project
+% export ACCESS_KEY="YC************"                                                             24-10-13 - 0:28:17
+
+shaman@hulk:~/project
+% export SECRET_KEY="YC**********"  
+```
+
 Инициируем `backend`
 ```
 terraform init -backend-config="access_key=$ACCESS_KEY" -backend-config="secret_key=$SECRET_KEY"
@@ -197,7 +308,7 @@ terraform init -backend-config="access_key=$ACCESS_KEY" -backend-config="secret_
 Созданный `bucket`
 ![backend](img/diplom-02.png)
 
-Переходим в папку _diplom/terraform_, выполняем `terraform init`, `terraform plan` и `terraform apply`. Результат - создание требуемой инфраструктуры
+Переходим в папку _Diplom/terraform_, выполняем `terraform init`, `terraform plan` и `terraform apply`. Результат - создание требуемой инфраструктуры
 
 Подсети в разных зонах доступности
 ![net](img/diplom-03.png)
@@ -213,19 +324,41 @@ terraform init -backend-config="access_key=$ACCESS_KEY" -backend-config="secret_
 cp ./hosts.cfg ../ansible/inventory/hosts.ini  
 ```
 
-Переходим в папку _diplom/sansible_ и ко второму заданию.
+Переходим в папку _Diplom/ansible_ и ко второму заданию.
 
 ---
 ### Создание Kubernetes кластера
 
 
- В папке запускаем последовательно `playbook`
-1. 1-kube.yaml
-2. 2-master.yml
-3. 3-join-workers.yml
-4. 4-helm-and-monitoring.yml
+ В папке запускаем `playbook`
+```
+ ansible-playbook -i inventory/hosts.ini playbook.yml
+ ___________________________________
+< PLAY [install docker and kubectl] >
+ -----------------------------------
+        \   ^__^
+         \  (oo)\_______
+            (__)\       )\/\
+                ||----w |
+                ||     ||
 
-После завершения последнего `playbook` имеем развёрнутый кластер и систему мониторинга
+ ________________________
+< TASK [Gathering Facts] >
+ ------------------------
+        \   ^__^
+         \  (oo)\_______
+            (__)\       )\/\
+                ||----w |
+                ||     ||
+
+ok: [51.250.80.23]
+ok: [51.250.32.190]
+ok: [62.84.121.182]
+ok: [62.84.120.31]
+
+```
+
+После завершения `playbook` имеем развёрнутый кластер и систему мониторинга
 ![kubectl](img/diplom-07.png)
 
 ---
@@ -248,7 +381,7 @@ EXPOSE 80
 
 ![dockerhub](img/diplom-17.png)
 
-Разворачиваем `deploy` в кластере. Пример файла конфигурации в корне каталога `diplom` (diplom/deployment.yaml)
+Разворачиваем `deploy` в кластере. Пример файла конфигурации в корне каталога `Diplom` (Diplom/deployment.yaml)
 ```
 apiVersion: apps/v1
 kind: Deployment

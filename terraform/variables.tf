@@ -39,32 +39,6 @@ variable "vpc" {
   }
 }
 
-# variable "master" {
-#   type = map(any)
-#   default = {
-#     cores         = 2,
-#     memory        = 2,
-#     core_fraction = 20,
-#     platform_id = "standard-v3"
-#     image_family  = "ubuntu-2004-lts"
-#     image_id      = "fd89j9gu6vbcmqkcf4gh"
-#     disk_size     = 20
-#   }
-# }
-
-# variable "worker" {
-#   type = map(any)
-#   default = {
-#     cores         = 2,
-#     memory        = 2,
-#     core_fraction = 20,
-#     platform_id = "standard-v3"
-#     image_family  = "ubuntu-2004-lts"
-#     image_id      = "fd89j9gu6vbcmqkcf4gh"
-#     disk_size     = 20
-#   }
-# }
-
 variable "user_name" {
   type = string
   default = "ubuntu"

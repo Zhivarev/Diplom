@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-prometheus-grafana
+  namespace: monitoring
+spec:
+  ports:
+    - name: prometheus-grafana
+      port: 3000
+      nodePort: 30090
+  selector:
+    app: svc-prometheus-grafana
+  type: NodePort

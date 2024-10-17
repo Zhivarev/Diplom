@@ -1,0 +1,42 @@
+---
+# tasks file for k8s_helm
+  - name: Download and install script
+    shell: |
+        curl -fsSL -o $HOME/get-helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+        chmod 700 $HOME/get-helm.sh
+        bash $HOME/get-helm.sh
+ 
+  # - name: Add Helm repo
+  #   ansible.builtin.shell: helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+  #   args:
+  #     executable: /bin/bash
+
+  - name: Add Helm repo & Run update Helm & Create namespace "monitoring" & install prometheus & apply svc.yaml
+    shell: "{{ item }}"
+    become_user: ubuntu
+    with_items:
+      - helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+      - helm repo update
+      - kubectl create namespace monitoring
+      - helm install prometheus prometheus-community/kube-prometheus-stack -n monitoring
+      - kubectl apply -f $HOME/svc.yaml
+
+  # - name: Run update Helm repo
+  #   ansible.builtin.shell: helm repo update
+  #   args:
+  #     executable: /bin/bash
+
+  # - name: Create namespace "monitoring"
+  #   ansible.builtin.shell: kubectl create namespace monitoring
+  #   args:
+  #     executable: /bin/bash
+
+  # - name: Helm install prometheus
+  #   ansible.builtin.shell: helm install prometheus prometheus-community/kube-prometheus-stack -n monitoring
+  #   args:
+  #     executable: /bin/bash
+
+  # - name: Run svc.yaml
+  #   ansible.builtin.shell: kubectl apply -f $HOME/svc.yaml
+  #   args:
+  #     executable: /bin/bash

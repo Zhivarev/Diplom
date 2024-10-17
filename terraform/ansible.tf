@@ -6,5 +6,7 @@ resource "local_file" "hosts_cfg" {
       worker   = yandex_compute_instance.platform
     }
   )
-  filename = "${abspath(path.module)}/hosts.cfg"
+
+  filename = "../ansible/inventory/hosts.ini"
+
 }
