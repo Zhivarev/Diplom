@@ -29,6 +29,11 @@
       - helm install prometheus prometheus-community/kube-prometheus-stack -n monitoring
       - kubectl apply -f $HOME/k8s_nodeport/svc.yaml
 
+  - name: Pull docker container
+    shell: "{{ item }}"
+    with_items:
+      - docker pull zhivarev/diplom-nginx:v1
+
   - name: Apply deployment.yaml
     shell: "{{ item }}"
     become_user: ubuntu
