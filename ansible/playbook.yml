@@ -4,7 +4,7 @@
   become: yes
   remote_user: ubuntu
   roles:
-  - docke_install
+  - docker_install
   - k8s_install
 
 - name: create cluster
@@ -27,3 +27,10 @@
   remote_user: ubuntu
   roles:
   - k8s_helm
+
+- name: setting up gitlab
+  hosts: master
+  become: yes
+  remote_user: ubuntu
+  roles:
+  - gitlab
