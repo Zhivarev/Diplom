@@ -368,11 +368,10 @@ ok: [62.84.120.31]
 Подготавливаем `Dockerfile` и наполняем его содержимым
 
 ```
-FROM alpine:3.14
-RUN apk add --no-cache curl nginx
+FROM debian:stable
+RUN apt-get update && apt-get install -y curl nginx
 COPY ./html/ /var/www/html
-COPY nginx.conf /etc/nginx/nginx.conf
-CMD nginx
+ENTRYPOINT ["nginx", "-g", "daemon off;"]
 EXPOSE 80
 ```
 
