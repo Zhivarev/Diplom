@@ -32,7 +32,7 @@
   - name: Pull docker container
     shell: "{{ item }}"
     with_items:
-      - docker pull zhivarev/diplom-nginx:v1
+      - docker pull registry.gitlab.com/zhivarev/diplom-nginx/diplom-nginx:latest
 
   - name: Apply deployment.yaml
     shell: "{{ item }}"
