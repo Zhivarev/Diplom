@@ -31,8 +31,6 @@ variable "vpc" {
     memory        = 2,
     core_fraction = 20,
     platform_id   = "standard-v3"
-    # image_family  = "ubuntu-2204-lts"
-    # image_id      = "fd8btqg2mh540ftne9p4"
     image_family  = "ubuntu-2004-lts"
     image_id      = "fd89j9gu6vbcmqkcf4gh"
     disk_size     = 40
