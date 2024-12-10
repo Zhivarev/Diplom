@@ -413,7 +413,6 @@ spec:
   ports:
     - name: http
       port: 80
-      targetPort: 80
       nodePort: 30080
   selector:
     app: web
@@ -430,20 +429,86 @@ spec:
 ### Подготовка cистемы мониторинга и деплой приложения
 
 Helm-chart с мониторингом был добавлен на втором этапе, вместе с развертыванием кластера.  
-Для доступа к мониторингу из интернета использован `svс.yaml` который предоставляет доступ к `Grafana` по 30090 порту ("login: admin"; "password: prom-operator")
+Для доступа к мониторингу из интернета использован `svс.yaml` который предоставляет доступ к `Grafana` по 30090 порту 
+# ("login: admin"; "password: prom-operator")
 ![grafana](img/diplom-19.png)
 
 
 ---
 ### Установка и настройка CI/CD
 
-Для выполнения задания выбран `Gitlab CI`, [ссылка](https://gitlab.com/Zhivarev/diplom-nginx) на проэкт.  
+Для выполнения задания выбран `Gitlab CI`, [ссылка](https://gitlab.com/Zhivarev/diplom-nginx)  
+Конфигурация конвеера:
+```
+stages:
+  - build
+  - deploy
+image: docker:cli
+services:
+  - docker:dind
+variables:
+  DOCKER_IMAGE_NAME: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+  REGISTRY: registry.gitlab.com
+  PROJECT_NAME: Zhivarev/diplom-nginx
 
-![http](img/diplom-24.png)
+build-tag:
+  stage: build
+  script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
+    - docker build --cache-from $CI_REGISTRY_IMAGE:latest --tag $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG --tag $CI_REGISTRY_IMAGE:latest .
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
+    - docker push $CI_REGISTRY_IMAGE:latest
+  rules:
+  - if: $CI_COMMIT_TAG =~ /^v\d+.\d+/
 
-![pipelines](img/diplom-25.png)  
+build-branch:
+  stage: build
+  script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
+    - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA .
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'main'
 
-![regestry](img/diplom-26.png)  
+deploy:
+  stage: deploy
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: ['']
+  script:
+    - kubectl config get-contexts
+    - kubectl config use-context Zhivarev/diplom-nginx:diplom-agent
+    - kubectl set image deployment web *=$CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
+    - kubectl rollout restart deployment/web -n default
+  rules:
+  - if: $CI_COMMIT_TAG =~ /^v\d+.\d+/
+```
+
+При коммите происходит сборка и отправка `docker` контейнера в `GitLab container registry`.  
+При создании тэга создаются два `docker` контейнера с версией тэга и `latest`. Следующим шагом конвеер отправляет путь до кластера kubernetes и устанавливает последнюю версию.
+Создаём новый тэг
+![tag](img/diplom-27.png)
+
+Происходят сборка и обновление деплоя
+![deploy](img/diplom-28.png)
+
+В кластере `pod` перезапустился - изменилось имя `pod`
+![pod](img/diplom-29.png)
+
+На странице web-сайта тоже видны изменения  
+![http-01](img/diplom-30.png)  
+![http-02](img/diplom-31.png)  
+
+Общая картина отработавших задач
+![jobs](img/diplom-32.png)
+
+Отработавшие коммиты
+![commit](img/diplom-34.png)
+
+Состояние `GitLab container registry`
+![registry](img/diplom-33.png)
+
+
 
 
 ------# Diplom
